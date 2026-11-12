@@ -14,7 +14,7 @@ const PASSWORDS = {
 function hash(password) {
   const salt = crypto.randomBytes(16);
   const key = crypto.scryptSync(password, salt, 32, { N: 16384, r: 8, p: 1 });
-  return `scrypt$16384$8$1$${salt.toString('base64')}:${key.toString('base64')}`;
+  return `scrypt.16384.8.1.${salt.toString('base64')}:${key.toString('base64')}`;
 }
 
 const users = {};

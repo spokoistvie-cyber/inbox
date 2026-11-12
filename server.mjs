@@ -109,7 +109,9 @@ function scryptHash(password, salt, N = 16384, r = 8, p = 1) {
   return crypto.scryptSync(password, salt, 32, { N, r, p, maxmem: 64 * 1024 * 1024 });
 }
 function checkPassword(password, stored) {
-  const parts = String(stored || '').split('$');
+  // Формат: scrypt.<N>.<r>.<p>.<saltB64>:<hashB64>.
+  // Доллар не используем: Coolify подставляет $VAR и портит значение (проверено 12.11.2026).
+  const parts = String(stored || '').split('.');
   if (parts.length !== 5 || parts[0] !== 'scrypt') return false;
   const [, n, rr, pp, rest] = parts;
   const [saltB64, hashB64] = rest.split(':');
@@ -291,18 +293,7 @@ async function handleApi(req, res, url) {
   const isSecure = String(req.headers['x-forwarded-proto'] || '').split(',')[0] === 'https';
 
   if (req.method === 'GET' && url.pathname === '/api/health') {
-    const detail = {};
-    for (const [id, u] of Object.entries(USERS)) {
-      const parts = String(u.hash || '').split('$');
-      detail[id] = {
-        hashLen: String(u.hash || '').length,
-        salt: (parts[4] || '').split(':')[0].slice(0, 8),
-        keyLen: (parts[4] || '').split(':')[1] ? (parts[4] || '').split(':')[1].length : 0,
-        name: u.name,
-        raw: String(u.hash || '').slice(0, 70)
-      };
-    }
-    return json(res, 200, { ok: true, dropbox: Boolean(REFRESH_TOKEN), users: Object.keys(USERS).length, detail });
+    return json(res, 200, { ok: true, dropbox: Boolean(REFRESH_TOKEN), users: Object.keys(USERS).length });
   }
 
   if (req.method === 'GET' && url.pathname === '/api/users') {
