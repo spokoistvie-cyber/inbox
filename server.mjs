@@ -35,12 +35,12 @@ if (!SESSION_SECRET || !REFRESH_TOKEN || Object.keys(USERS).length === 0) {
 
 const TARGETS = {
   galina: {
-    title: 'входящие Галины',
+    title: 'Галине',
     path: '/Галина Старченко/Архив Claude/База/99_Входящие',
     home: 'https://www.dropbox.com/home' + encodeURIComponentPath('/Галина Старченко/Архив Claude/База/99_Входящие')
   },
   artem: {
-    title: 'входящие Артёма',
+    title: 'Артёму',
     path: '/Артем Старченко/0. Входящие',
     home: 'https://www.dropbox.com/home' + encodeURIComponentPath('/Артем Старченко/0. Входящие')
   }
@@ -214,7 +214,12 @@ async function dropboxUpload(dropboxPath, buffer, contentType = 'application/oct
 /* ───────────── точки входа API ───────────── */
 
 async function handleSend(req, res, user) {
-  const raw = await readBody(req, MAX_BODY);
+  let raw;
+  try {
+    raw = await readBody(req, MAX_BODY);
+  } catch {
+    return json(res, 413, { error: 'Слишком большие файлы: за один раз не больше 120 МБ' });
+  }
   let form;
   try {
     form = await new Request('http://local/upload', {
