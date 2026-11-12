@@ -252,8 +252,12 @@ function clearComposer() {
 
 function idb() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open('inbox-app', 1);
-    req.onupgradeneeded = () => req.result.createObjectStore('outbox', { keyPath: 'id' });
+    const req = indexedDB.open('inbox-app', 2);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains('outbox')) db.createObjectStore('outbox', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains('shared')) db.createObjectStore('shared', { keyPath: 'id' });
+    };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
@@ -284,6 +288,48 @@ async function outboxDel(id) {
     tx.onerror = () => resolve();
   });
 }
+async function sharedTake(id) {
+  const db = await idb();
+  return new Promise((resolve) => {
+    const tx = db.transaction('shared', 'readwrite').objectStore('shared');
+    const get = tx.get(id);
+    get.onsuccess = () => {
+      tx.delete(id);
+      resolve(get.result || null);
+    };
+    get.onerror = () => resolve(null);
+  });
+}
+
+/** Файлы и текст, пришедшие из системного «Поделиться» (Web Share Target). */
+async function applyIncomingShare() {
+  const params = new URLSearchParams(location.search);
+  if (params.has('share_failed')) {
+    history.replaceState(null, '', location.pathname);
+    toast('Файлы из «Поделиться» не принялись — добавь вручную', 'err');
+  }
+  const id = params.get('shared');
+  if (!id) return;
+  try {
+    const item = await sharedTake(id);
+    if (item) {
+      const text = [item.text, item.url].filter(Boolean).join('\n');
+      if (text) el.msg.value = (el.msg.value ? el.msg.value + '\n' : '') + text;
+      if (!el.msg.value && item.title) el.msg.value = item.title;
+      let added = 0;
+      for (const f of item.files || []) {
+        if (!f || !f.blob || !f.name) continue;
+        state.files.push({ name: f.name, size: f.blob.size || 0, blob: f.blob });
+        added += 1;
+      }
+      renderFiles();
+      renderSendState();
+      if (added) toast(`Принял из «Поделиться»: ${added} файл(ов) — выбери, кому отправить`, 'ok');
+    }
+  } catch { /* тихо */ }
+  history.replaceState(null, '', location.pathname);
+}
+
 async function renderQueue() {
   const items = await outboxAll();
   el.queueBox.hidden = items.length === 0;
@@ -440,6 +486,7 @@ function wire() {
 
 async function boot() {
   wire();
+  await applyIncomingShare();
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }

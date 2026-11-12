@@ -396,6 +396,11 @@ function serveStatic(req, res, url) {
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://local');
+  if (req.method === 'POST' && url.pathname === '/share') {
+    // «Поделиться» без service worker: вернуть в приложение с понятным сообщением.
+    res.writeHead(303, { Location: '/?share_failed=1' });
+    return res.end();
+  }
   if (url.pathname.startsWith('/api/')) {
     handleApi(req, res, url).catch((err) => {
       console.error('[api]', err);
