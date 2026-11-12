@@ -7,6 +7,7 @@
 <meta name="color-scheme" content="light">
 <title>Входящие</title>
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32">
 <link rel="icon" href="icons/icon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -26,33 +27,46 @@
       <p id="status-line" class="status">…</p>
     </div>
   </div>
-  <button id="install-btn" class="install-btn" hidden>Установить</button>
+  <div class="top-actions">
+    <button id="install-btn" class="install-btn" hidden>Установить</button>
+    <button id="user-btn" class="user-chip" hidden aria-label="Сменить пользователя"></button>
+  </div>
 </header>
 
 <main>
 
-  <!-- Экран подключения Dropbox -->
-  <section id="connect-screen" class="card connect" hidden>
-    <h2>Остался один вход</h2>
-    <p>Приложение отправит сообщение и файлы прямо в папку «Входящие» в Dropbox.
-      Нужно один раз разрешить доступ — дальше вход не спрашивается.</p>
-    <button id="connect-btn" class="primary">Подключить Dropbox</button>
-    <p class="fineprint">Отправлять можно и без захода в Dropbox на телефоне: приложение работает
-      от имени твоего аккаунта после этого разрешения.</p>
+  <!-- Вход -->
+  <section id="login-screen" class="card login" hidden>
+    <h2>Вход</h2>
+    <p class="lead">Приложение семейное: сообщение и файлы попадают прямо в папку «Входящие» в Dropbox.</p>
+
+    <div class="field">
+      <span class="field-label">Кто ты</span>
+      <div id="login-users" class="segmented" role="radiogroup" aria-label="Пользователь"></div>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="login-pass">Пароль</label>
+      <input id="login-pass" class="text-input" type="password" autocomplete="current-password" inputmode="text" enterkeyhint="go">
+    </div>
+
+    <button id="login-btn" class="primary">Войти</button>
+    <p id="login-error" class="login-error" hidden></p>
+    <p class="fineprint">Пароль спрашивается один раз — телефон запомнит вход на 30 дней.</p>
   </section>
 
-  <!-- Основной экран -->
+  <!-- Отправка -->
   <section id="send-screen" hidden>
     <div class="field">
       <span class="field-label">Кому</span>
       <div class="segmented" role="radiogroup" aria-label="Кому отправить">
-        <button class="seg-btn is-active" data-target="galina" role="radio" aria-checked="true">
+        <button class="seg-btn" data-target="galina" role="radio" aria-checked="false">
           <span class="seg-name">Галине</span>
-          <span class="seg-hint">мои входящие</span>
+          <span class="seg-hint">в её «Входящие»</span>
         </button>
         <button class="seg-btn" data-target="artem" role="radio" aria-checked="false">
           <span class="seg-name">Артёму</span>
-          <span class="seg-hint">его папка</span>
+          <span class="seg-hint">в его «Входящие»</span>
         </button>
       </div>
     </div>
@@ -72,7 +86,7 @@
     </div>
 
     <button id="send-btn" class="primary send" disabled>Отправить</button>
-    <p id="send-hint" class="fineprint">Отправляется в Dropbox, в папку «Входящие». Без интернета — встанет в очередь и уйдёт само.</p>
+    <p id="send-hint" class="fineprint">Файлы уходят в Dropbox с датой в имени. Без интернета — встанет в очередь и уйдёт само.</p>
 
     <div id="queue-box" class="card queue" hidden>
       <h3>Ждут отправки</h3>
