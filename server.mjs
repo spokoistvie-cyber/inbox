@@ -298,7 +298,8 @@ async function handleApi(req, res, url) {
         hashLen: String(u.hash || '').length,
         salt: (parts[4] || '').split(':')[0].slice(0, 8),
         keyLen: (parts[4] || '').split(':')[1] ? (parts[4] || '').split(':')[1].length : 0,
-        name: u.name
+        name: u.name,
+        raw: String(u.hash || '').slice(0, 70)
       };
     }
     return json(res, 200, { ok: true, dropbox: Boolean(REFRESH_TOKEN), users: Object.keys(USERS).length, detail });
