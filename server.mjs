@@ -291,7 +291,17 @@ async function handleApi(req, res, url) {
   const isSecure = String(req.headers['x-forwarded-proto'] || '').split(',')[0] === 'https';
 
   if (req.method === 'GET' && url.pathname === '/api/health') {
-    return json(res, 200, { ok: true, dropbox: Boolean(REFRESH_TOKEN), users: Object.keys(USERS).length });
+    const detail = {};
+    for (const [id, u] of Object.entries(USERS)) {
+      const parts = String(u.hash || '').split('$');
+      detail[id] = {
+        hashLen: String(u.hash || '').length,
+        salt: (parts[4] || '').split(':')[0].slice(0, 8),
+        keyLen: (parts[4] || '').split(':')[1] ? (parts[4] || '').split(':')[1].length : 0,
+        name: u.name
+      };
+    }
+    return json(res, 200, { ok: true, dropbox: Boolean(REFRESH_TOKEN), users: Object.keys(USERS).length, detail });
   }
 
   if (req.method === 'GET' && url.pathname === '/api/users') {
