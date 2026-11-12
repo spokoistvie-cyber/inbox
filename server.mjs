@@ -77,8 +77,15 @@ function readBody(req, limit) {
   });
 }
 function pad2(n) { return String(n).padStart(2, '0'); }
+const MSK = { timeZone: 'Europe/Moscow' };
+const STAMP_PARTS = new Intl.DateTimeFormat('ru-RU', {
+  ...MSK, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false
+});
+/** Время по Москве, а не по UTC контейнера. */
 function stamp(d = new Date()) {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}-${pad2(d.getMinutes())}`;
+  const parts = STAMP_PARTS.formatToParts(d);
+  const get = (t) => parts.find((p) => p.type === t).value;
+  return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}-${get('minute')}`;
 }
 function cleanFileName(name) {
   let base = String(name || 'файл').replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim();
@@ -240,7 +247,7 @@ async function handleSend(req, res, user) {
   }
 
   if (text) {
-    const when = new Date().toLocaleString('ru-RU', { dateStyle: 'long', timeStyle: 'short' });
+    const when = new Date().toLocaleString('ru-RU', { ...MSK, dateStyle: 'long', timeStyle: 'short' });
     const lines = [
       '# Сообщение из приложения «Входящие»',
       '',
