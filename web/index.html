@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#b3652f">
+<meta name="color-scheme" content="light">
+<title>Входящие</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Входящие">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 100 100" width="30" height="30"><rect width="100" height="100" rx="24" fill="#b3652f"/><rect x="22" y="26" width="56" height="46" rx="6" fill="#faf7f2"/><path d="M24 30 l26 20 26-20" fill="none" stroke="#b3652f" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+    <div class="brand-text">
+      <h1>Входящие</h1>
+      <p id="status-line" class="status">…</p>
+    </div>
+  </div>
+  <button id="install-btn" class="install-btn" hidden>Установить</button>
+</header>
+
+<main>
+
+  <!-- Экран подключения Dropbox -->
+  <section id="connect-screen" class="card connect" hidden>
+    <h2>Остался один вход</h2>
+    <p>Приложение отправит сообщение и файлы прямо в папку «Входящие» в Dropbox.
+      Нужно один раз разрешить доступ — дальше вход не спрашивается.</p>
+    <button id="connect-btn" class="primary">Подключить Dropbox</button>
+    <p class="fineprint">Отправлять можно и без захода в Dropbox на телефоне: приложение работает
+      от имени твоего аккаунта после этого разрешения.</p>
+  </section>
+
+  <!-- Основной экран -->
+  <section id="send-screen" hidden>
+    <div class="field">
+      <span class="field-label">Кому</span>
+      <div class="segmented" role="radiogroup" aria-label="Кому отправить">
+        <button class="seg-btn is-active" data-target="galina" role="radio" aria-checked="true">
+          <span class="seg-name">Галине</span>
+          <span class="seg-hint">мои входящие</span>
+        </button>
+        <button class="seg-btn" data-target="artem" role="radio" aria-checked="false">
+          <span class="seg-name">Артёму</span>
+          <span class="seg-hint">его папка</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="msg">Сообщение</label>
+      <textarea id="msg" placeholder="Что передать? Коротко, своими словами…" rows="4"></textarea>
+    </div>
+
+    <div class="field">
+      <div class="attachments-head">
+        <span class="field-label">Файлы</span>
+        <button id="pick-btn" class="ghost">+ Фото или файл</button>
+        <input id="file-input" type="file" multiple hidden>
+      </div>
+      <ul id="files" class="files"></ul>
+    </div>
+
+    <button id="send-btn" class="primary send" disabled>Отправить</button>
+    <p id="send-hint" class="fineprint">Отправляется в Dropbox, в папку «Входящие». Без интернета — встанет в очередь и уйдёт само.</p>
+
+    <div id="queue-box" class="card queue" hidden>
+      <h3>Ждут отправки</h3>
+      <ul id="queue"></ul>
+    </div>
+
+    <div id="recent-box" class="card recent" hidden>
+      <h3>Только что отправлено</h3>
+      <ul id="recent"></ul>
+    </div>
+  </section>
+
+</main>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="app.js" defer></script>
+</body>
+</html>

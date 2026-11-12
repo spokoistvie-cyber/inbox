@@ -1,0 +1,251 @@
+/* Входящие — мобильное приложение-отправка в Dropbox.
+   Тёплая бумажная палитра, как у Пулта. */
+
+:root {
+  --paper: #faf7f2;
+  --paper-2: #fffdfa;
+  --ink: #2b241d;
+  --ink-2: #6f6152;
+  --muted: #9a8b79;
+  --accent: #b3652f;
+  --accent-dark: #96501f;
+  --line: #e8ddcf;
+  --ok: #3f6b4a;
+  --err: #a13c2c;
+  --radius: 16px;
+  --shadow: 0 1px 2px rgba(74, 55, 36, .06), 0 8px 24px rgba(74, 55, 36, .06);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background-image: radial-gradient(120% 60% at 50% 0%, #fdfbf7 0%, var(--paper) 60%);
+}
+
+h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -.01em; }
+p { margin: 0; }
+
+/* ─────────── шапка ─────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 6px;
+  max-width: 560px;
+  margin: 0 auto;
+}
+.brand { display: flex; gap: 11px; align-items: center; min-width: 0; }
+.brand-mark { display: flex; filter: drop-shadow(0 2px 3px rgba(179, 101, 47, .18)); }
+.brand-text { min-width: 0; }
+h1 { font-size: 21px; line-height: 1.15; }
+.status { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.status.ok { color: var(--ok); }
+.status.bad { color: var(--err); }
+
+.install-btn {
+  border: 1px solid var(--line);
+  background: var(--paper-2);
+  color: var(--accent-dark);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 13px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+/* ─────────── общее ─────────── */
+main { max-width: 560px; margin: 0 auto; padding: 8px 16px 40px; }
+
+.card {
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+.card h3 { font-size: 14px; color: var(--ink-2); font-weight: 650; margin-bottom: 8px; }
+
+.field { margin-top: 14px; }
+.field-label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 650;
+  letter-spacing: .02em;
+  color: var(--ink-2);
+  margin-bottom: 7px;
+}
+
+.primary {
+  width: 100%;
+  border: 0;
+  border-radius: 14px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 650;
+  padding: 16px;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(179, 101, 47, .22);
+  transition: background .15s, transform .06s;
+}
+.primary:active { transform: translateY(1px); }
+.primary:disabled { background: #d9cdbf; box-shadow: none; cursor: default; }
+.primary.busy { background: var(--accent-dark); }
+
+.ghost {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--accent-dark);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 9px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.ghost:active { background: #fbf4ec; }
+
+.fineprint { font-size: 12.5px; color: var(--muted); margin-top: 10px; line-height: 1.4; }
+
+/* ─────────── выбор адресата ─────────── */
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  background: #f1e9de;
+  padding: 5px;
+  border-radius: 14px;
+}
+.seg-btn {
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  padding: 10px 8px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink-2);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.seg-btn.is-active {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(74, 55, 36, .12);
+}
+.seg-name { font-size: 15.5px; font-weight: 650; }
+.seg-hint { font-size: 11.5px; color: var(--muted); }
+
+/* ─────────── сообщение ─────────── */
+textarea {
+  width: 100%;
+  resize: none;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  padding: 13px 14px;
+  min-height: 108px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+textarea::placeholder { color: #b3a493; }
+textarea:focus { border-color: #d3b28e; box-shadow: 0 0 0 3px rgba(179, 101, 47, .1); }
+
+/* ─────────── файлы ─────────── */
+.attachments-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.attachments-head .field-label { margin: 0; }
+
+.files { list-style: none; margin: 9px 0 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.file-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 9px 11px;
+}
+.file-ico {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: #f6ecdf; color: var(--accent-dark);
+  display: grid; place-items: center; font-size: 12px; font-weight: 700; flex: none;
+  text-transform: uppercase;
+}
+.file-meta { min-width: 0; flex: 1; }
+.file-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 560;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-size { font-size: 11.5px; color: var(--muted); }
+.file-x {
+  border: 0; background: transparent; color: var(--muted);
+  font-size: 20px; line-height: 1; padding: 4px 6px; cursor: pointer;
+}
+
+.send { margin-top: 20px; }
+
+/* ─────────── очередь и «отправлено» ─────────── */
+.queue, .recent { margin-top: 16px; }
+.queue h3 { color: var(--accent-dark); }
+.queue ul, .recent ul { list-style: none; margin: 0; padding: 0; }
+.queue li, .recent li {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 7px 0; border-top: 1px dashed var(--line);
+  font-size: 13.5px;
+}
+.queue li:first-child, .recent li:first-child { border-top: 0; }
+.li-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.li-sub { color: var(--muted); font-size: 12px; flex: none; }
+.li-link { color: var(--accent-dark); font-size: 12.5px; text-decoration: none; border-bottom: 1px solid rgba(179,101,47,.35); }
+.queue .li-warn { color: var(--err); }
+
+/* ─────────── экран подключения ─────────── */
+.connect { margin-top: 26px; text-align: left; }
+.connect h2 { font-size: 19px; margin-bottom: 8px; }
+.connect p { color: var(--ink-2); font-size: 14.5px; }
+.connect .primary { margin-top: 16px; }
+
+/* ─────────── тост ─────────── */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  transform: translate(-50%, 20px);
+  max-width: min(92vw, 480px);
+  background: #2f2a23;
+  color: #fdfaf5;
+  padding: 11px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+  z-index: 50;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast.err { background: #7d2a1e; }
+.toast.ok { background: #33533c; }
+
+@media (prefers-color-scheme: dark) {
+  /* Приложение сознательно остаётся «бумажным» и светлым: так задумано. */
+}
