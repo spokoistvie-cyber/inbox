@@ -78,11 +78,24 @@
 
     <div class="field">
       <div class="attachments-head">
-        <span class="field-label">Файлы</span>
-        <button id="pick-btn" class="ghost">+ Фото или файл</button>
+        <span class="field-label">Файлы и голос</span>
+        <span class="attach-actions">
+          <button id="voice-btn" class="ghost" type="button">Голосовое</button>
+          <button id="pick-btn" class="ghost" type="button">+ Фото или файл</button>
+        </span>
         <input id="file-input" type="file" multiple hidden>
       </div>
+
+      <div id="rec-panel" class="rec-panel" hidden>
+        <span class="rec-dot" aria-hidden="true"></span>
+        <span id="rec-time" class="rec-time">0:00</span>
+        <span class="rec-hint">запись…</span>
+        <button id="rec-stop" class="rec-stop" type="button">Стоп</button>
+        <button id="rec-cancel" class="rec-cancel" type="button">Отмена</button>
+      </div>
+
       <ul id="files" class="files"></ul>
+      <div id="audio-preview" class="audio-preview" hidden></div>
     </div>
 
     <button id="send-btn" class="primary send" disabled>Отправить</button>

@@ -16,6 +16,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import os from 'node:os';
+import { execFile } from 'node:child_process';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const WEB = path.join(here, 'web');
@@ -213,6 +215,103 @@ async function dropboxUpload(dropboxPath, buffer, contentType = 'application/oct
   return res.json();
 }
 
+/* ───────────── голосовые ───────────── */
+
+const AUDIO_EXT = new Set(['webm', 'ogg', 'oga', 'm4a', 'mp3', 'wav', 'aac', 'flac', 'm4r', 'wma', 'aif', 'aiff', 'mp4']);
+
+function isAudioFile(name, type) {
+  if (type && String(type).startsWith('audio/')) return true;
+  const m = /\.([a-z0-9]+)$/i.exec(String(name || ''));
+  return Boolean(m && AUDIO_EXT.has(m[1].toLowerCase()));
+}
+
+function fmtSec(sec) {
+  const s = Math.max(0, Math.round(Number(sec) || 0));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function runFfmpeg(args) {
+  return new Promise((resolve, reject) => {
+    execFile('ffmpeg', args, { timeout: 180000 }, (err, _out, stderr) => {
+      if (err) reject(new Error(String(stderr || err.message).slice(-300)));
+      else resolve();
+    });
+  });
+}
+
+/** Перекодировать в m4a (AAC, моно): такой файл проигрывается в Dropbox на любом телефоне. */
+async function toM4a(buffer, ext) {
+  const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'inbox-'));
+  const src = path.join(dir, 'in.' + (ext || 'webm'));
+  const dst = path.join(dir, 'out.m4a');
+  try {
+    await fs.promises.writeFile(src, buffer);
+    await runFfmpeg(['-y', '-hide_banner', '-loglevel', 'error', '-i', src,
+      '-vn', '-ac', '1', '-ar', '22050', '-c:a', 'aac', '-b:a', '48k', dst]);
+    return await fs.promises.readFile(dst);
+  } finally {
+    await fs.promises.rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+async function dropboxRpc(route, body, attempt = 0) {
+  const send = (token) => fetch('https://api.dropboxapi.com/2/' + route, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  let res = await send(await dropboxToken());
+  if (res.status === 401) res = await send(await dropboxToken(true));
+  if (res.status === 429 && attempt < 5) {
+    const wait = Math.min(60, Number(res.headers.get('retry-after') || 5));
+    await new Promise((r) => setTimeout(r, wait * 1000 + 500));
+    return dropboxRpc(route, body, attempt + 1);
+  }
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Dropbox ${route}: ${res.status} ${text.slice(0, 200)}`);
+  return JSON.parse(text);
+}
+
+/** Расшифровка средствами Dropbox (riviera/get_transcript_async): кладём рядом .md с текстом. */
+async function transcribeVoice(target, voice, prefix) {
+  const started = await dropboxRpc('riviera/get_transcript_async', {
+    file_id_or_url: { '.tag': 'path', path: voice.path },
+    audio_language: 'ru',
+    timestamp_level: { '.tag': 'sentence' }
+  });
+  const job = started.async_job_id;
+  if (!job) return;
+  for (let i = 0; i < 60; i += 1) {
+    await new Promise((r) => setTimeout(r, 3000));
+    const st = await dropboxRpc('riviera/get_transcript_async/check', { async_job_id: job });
+    if (st['.tag'] === 'failed') {
+      console.error('[voice] не расшифровалось:', JSON.stringify(st.failed || {}).slice(0, 200));
+      return;
+    }
+    if (st['.tag'] === 'complete') {
+      const segments = (st.structured_transcript && st.structured_transcript.segments) || [];
+      const text = segments.map((x) => x.text || '').join(' ').trim();
+      if (!text) return;
+      const lines = [
+        '# Расшифровка голосового',
+        '',
+        `- Файл: ${voice.name}`,
+        '- Расшифровано: Dropbox, автоматически',
+        '',
+        '---',
+        '',
+        text,
+        ''
+      ];
+      await dropboxUpload(`${target.path}/${prefix} — расшифровка голосового.md`,
+        Buffer.from(lines.join('\n'), 'utf8'));
+      console.log('[voice] расшифровка загружена:', text.slice(0, 60));
+      return;
+    }
+  }
+  console.error('[voice] расшифровка не завершилась за отведённое время');
+}
+
 /* ───────────── точки входа API ───────────── */
 
 async function handleSend(req, res, user) {
@@ -237,6 +336,8 @@ async function handleSend(req, res, user) {
   if (!target) return json(res, 400, { error: 'Не выбран адресат' });
   const text = String(form.get('text') || '').trim();
   const files = form.getAll('files').filter((f) => typeof f === 'object' && f && f.name);
+  const voiceFlag = String(form.get('voice') || '') === '1';
+  const voiceDuration = Number(form.get('voice_duration') || 0) || 0;
 
   if (!text && files.length === 0) return json(res, 400, { error: 'Пустое сообщение' });
 
@@ -244,13 +345,25 @@ async function handleSend(req, res, user) {
   const senderGen = user.gen || user.name;
   const prefix = stamp();
   const uploaded = [];
+  let voice = null;
 
   for (const f of files) {
     if (f.size > MAX_FILE) return json(res, 413, { error: `«${f.name}» больше 100 МБ` });
-    const buf = Buffer.from(await f.arrayBuffer());
-    const name = `${prefix} — ${cleanFileName(f.name)}`;
+    let buf = Buffer.from(await f.arrayBuffer());
+    let name = `${prefix} — ${cleanFileName(f.name)}`;
+    const audio = isAudioFile(f.name, f.type);
+    if (audio && !/\.(m4a|mp3)$/i.test(name)) {
+      const ext = (/\.([a-z0-9]+)$/i.exec(f.name) || [])[1] || 'webm';
+      try {
+        buf = await toM4a(buf, ext);
+        name = name.replace(/\.[a-z0-9]+$/i, '') + '.m4a';
+      } catch (err) {
+        console.error('[voice] конвертация не удалась, отправляю как есть:', err.message);
+      }
+    }
     const info = await dropboxUpload(`${target.path}/${name}`, buf, 'application/octet-stream');
-    uploaded.push({ name: info.name, size: f.size, path: info.path_display });
+    uploaded.push({ name: info.name, size: buf.length, path: info.path_display });
+    if (audio) voice = { path: info.path_display, name: info.name };
   }
 
   if (text) {
@@ -264,6 +377,7 @@ async function handleSend(req, res, user) {
       files.length
         ? '- Файлы: ' + files.map((f) => `${cleanFileName(f.name)} (${humanSize(f.size)})`).join(', ')
         : '- Файлы: нет',
+      voiceFlag && voiceDuration ? `- Голосовое: ${fmtSec(voiceDuration)}` : '',
       '',
       '---',
       '',
@@ -278,8 +392,10 @@ async function handleSend(req, res, user) {
     uploaded.push({ name: info.name, size: Buffer.byteLength(lines.join('\n')), path: info.path_display });
   }
 
+  if (voice) transcribeVoice(target, voice, prefix).catch((err) => console.error('[voice]', err.message));
+
   console.log(`[send] ${sender} → ${target.title}: ${uploaded.length} объектов`);
-  return json(res, 200, { ok: true, uploaded, target: target.title, home: target.home });
+  return json(res, 200, { ok: true, uploaded, target: target.title, home: target.home, voice: Boolean(voice) });
 }
 
 function requireUser(req, res) {

@@ -45,6 +45,14 @@ const el = {
   recent: $('#recent'),
   toast: $('#toast')
 };
+Object.assign(el, {
+  voiceBtn: $('#voice-btn'),
+  recPanel: $('#rec-panel'),
+  recTime: $('#rec-time'),
+  recStop: $('#rec-stop'),
+  recCancel: $('#rec-cancel'),
+  audioPreview: $('#audio-preview')
+});
 
 /* ─────────── утилиты ─────────── */
 
@@ -165,6 +173,108 @@ function setUser(user) {
   if (user) flushOutbox();
 }
 
+/* ─────────── запись голосового ─────────── */
+
+const REC_MAX_SEC = 300;
+let recorder = null;
+
+function audioMime() {
+  const list = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/ogg'];
+  for (const m of list) {
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
+  }
+  return '';
+}
+function extFromMime(mime) {
+  if (!mime) return 'webm';
+  if (mime.includes('mp4')) return 'm4a';
+  if (mime.includes('ogg')) return 'ogg';
+  return 'webm';
+}
+function fmtDur(sec) {
+  const s = Math.max(0, Math.round(sec));
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+
+async function startRec() {
+  if (recorder) return;
+  if (!navigator.mediaDevices || !window.MediaRecorder) {
+    toast('Браузер не умеет записывать звук', 'err');
+    return;
+  }
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch {
+    toast('Разреши доступ к микрофону в настройках сайта', 'err');
+    return;
+  }
+  const mime = audioMime();
+  let mr;
+  try {
+    mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+  } catch {
+    stream.getTracks().forEach((t) => t.stop());
+    toast('Не удалось начать запись', 'err');
+    return;
+  }
+  const st = { mr, stream, chunks: [], startedAt: Date.now(), timer: null, keep: false };
+  mr.ondataavailable = (e) => { if (e.data && e.data.size) st.chunks.push(e.data); };
+  mr.onstop = () => finishRec();
+  recorder = st;
+  mr.start(250);
+  el.recPanel.hidden = false;
+  el.voiceBtn.textContent = 'Идёт запись…';
+  el.voiceBtn.classList.add('is-rec');
+  el.recTime.textContent = '0:00';
+  st.timer = setInterval(() => {
+    const sec = (Date.now() - st.startedAt) / 1000;
+    el.recTime.textContent = fmtDur(sec);
+    if (sec >= REC_MAX_SEC) stopRec(true);
+  }, 250);
+}
+
+function stopRec(keep) {
+  if (!recorder) return;
+  recorder.keep = keep;
+  try { recorder.mr.stop(); } catch { finishRec(); }
+  if (recorder && recorder.stream) recorder.stream.getTracks().forEach((t) => t.stop());
+}
+
+function finishRec() {
+  const st = recorder;
+  if (!st) return;
+  recorder = null;
+  clearInterval(st.timer);
+  el.recPanel.hidden = true;
+  el.voiceBtn.textContent = 'Голосовое';
+  el.voiceBtn.classList.remove('is-rec');
+  if (!st.keep) return;
+  const sec = Math.max(1, Math.round((Date.now() - st.startedAt) / 1000));
+  const mime = st.mr.mimeType || 'audio/webm';
+  const blob = new Blob(st.chunks, { type: mime });
+  if (!blob.size) { toast('Запись пустая — попробуй ещё раз', 'err'); return; }
+  const name = 'голосовое ' + sec + 'с.' + extFromMime(mime);
+  state.files.push({ name, size: blob.size, blob: new File([blob], name, { type: mime }), audio: true, duration: sec });
+  renderFiles();
+  renderSendState();
+  toast('Записал — можно отправить', 'ok');
+}
+
+function renderAudioPreview() {
+  const audio = state.files.find((f) => f.audio);
+  if (!audio || !audio.blob) { el.audioPreview.hidden = true; el.audioPreview.innerHTML = ''; return; }
+  if (el.audioPreview.dataset.key === audio.name) return;
+  el.audioPreview.dataset.key = audio.name;
+  el.audioPreview.innerHTML = '';
+  const player = document.createElement('audio');
+  player.controls = true;
+  player.src = URL.createObjectURL(audio.blob);
+  player.preload = 'metadata';
+  el.audioPreview.append(player);
+  el.audioPreview.hidden = false;
+}
+
 /* ─────────── отправка ─────────── */
 
 function draftFromUi() {
@@ -183,6 +293,11 @@ async function postDraft(draft) {
   fd.append('text', draft.text || '');
   for (const f of draft.files) {
     fd.append('files', f.blob, f.name);
+  }
+  const voice = draft.files.find((f) => f.audio);
+  if (voice) {
+    fd.append('voice', '1');
+    fd.append('voice_duration', String(voice.duration || 0));
   }
   return api('/api/send', { method: 'POST', body: fd });
 }
@@ -372,7 +487,7 @@ function renderFiles() {
     li.className = 'file-chip';
     const ico = document.createElement('span');
     ico.className = 'file-ico';
-    ico.textContent = extOf(f.name);
+    ico.textContent = f.audio ? 'AUD' : extOf(f.name);
     const meta = document.createElement('span');
     meta.className = 'file-meta';
     const name = document.createElement('span');
@@ -380,7 +495,7 @@ function renderFiles() {
     name.textContent = f.name;
     const size = document.createElement('span');
     size.className = 'file-size';
-    size.textContent = humanSize(f.size);
+    size.textContent = f.audio && f.duration ? humanSize(f.size) + ' · ' + fmtDur(f.duration) : humanSize(f.size);
     meta.append(name, size);
     const x = document.createElement('button');
     x.type = 'button';
@@ -391,6 +506,7 @@ function renderFiles() {
     li.append(ico, meta, x);
     el.files.append(li);
   }
+  renderAudioPreview();
 }
 
 function renderSendState() {
@@ -441,6 +557,9 @@ function wire() {
   el.loginPass.addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
   el.userBtn.addEventListener('click', logout);
 
+  el.voiceBtn.addEventListener('click', () => { if (recorder) stopRec(true); else startRec(); });
+  el.recStop.addEventListener('click', () => stopRec(true));
+  el.recCancel.addEventListener('click', () => stopRec(false));
   el.pickBtn.addEventListener('click', () => el.fileInput.click());
   el.fileInput.addEventListener('change', () => {
     for (const f of el.fileInput.files || []) {
