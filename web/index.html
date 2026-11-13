@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Входящие">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=20261113b">
 </head>
 <body>
 
@@ -80,7 +80,10 @@
       <div class="attachments-head">
         <span class="field-label">Файлы и голос</span>
         <span class="attach-actions">
-          <button id="voice-btn" class="ghost" type="button">Голосовое</button>
+          <button id="voice-btn" class="ghost voice-btn" type="button">
+            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg>
+            <span>Голосовое</span>
+          </button>
           <button id="pick-btn" class="ghost" type="button">+ Фото или файл</button>
         </span>
         <input id="file-input" type="file" multiple hidden>
@@ -116,6 +119,6 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-<script src="app.js" defer></script>
+<script src="app.js?v=20261113b" defer></script>
 </body>
 </html>

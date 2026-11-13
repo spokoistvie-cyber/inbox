@@ -195,3 +195,7 @@ textarea:focus { border-color: #d3b28e; box-shadow: 0 0 0 3px rgba(179, 101, 47,
 .rec-cancel { border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 9px 12px; color: var(--ink-2); cursor: pointer; }
 .audio-preview { margin-top: 10px; }
 .audio-preview audio { width: 100%; }
+
+.voice-btn { display: inline-flex; align-items: center; gap: 6px; }
+.voice-btn svg { flex: none; }
+.voice-btn.is-rec { border-color: #c0392b; color: #c0392b; }

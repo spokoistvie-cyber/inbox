@@ -1,5 +1,5 @@
 /* Кэш оболочки приложения + приём файлов из системного «Поделиться». */
-const CACHE = 'inbox-shell-v3';
+const CACHE = 'inbox-shell-v4';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 

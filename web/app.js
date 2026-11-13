@@ -198,6 +198,10 @@ function fmtDur(sec) {
 
 async function startRec() {
   if (recorder) return;
+  if (!window.isSecureContext) {
+    toast('Запись работает только по HTTPS (адрес должен начинаться с https://)', 'err');
+    return;
+  }
   if (!navigator.mediaDevices || !window.MediaRecorder) {
     toast('Браузер не умеет записывать звук', 'err');
     return;
@@ -557,7 +561,14 @@ function wire() {
   el.loginPass.addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
   el.userBtn.addEventListener('click', logout);
 
-  el.voiceBtn.addEventListener('click', () => { if (recorder) stopRec(true); else startRec(); });
+  el.voiceBtn.addEventListener('click', async () => {
+    if (recorder) { stopRec(true); return; }
+    try {
+      await startRec();
+    } catch (err) {
+      toast('Не удалось начать запись: ' + (err && err.message ? err.message : err), 'err');
+    }
+  });
   el.recStop.addEventListener('click', () => stopRec(true));
   el.recCancel.addEventListener('click', () => stopRec(false));
   el.pickBtn.addEventListener('click', () => el.fileInput.click());

@@ -496,7 +496,9 @@ function serveStatic(req, res, url) {
       return res.end('не найдено');
     }
     const ext = path.extname(file).toLowerCase();
-    const noCache = ext === '.html' || file.endsWith('sw.js') || ext === '.webmanifest';
+    // Скрипты и стили — всегда ревалидация: иначе телефон неделю держит старую версию
+    // (13.11.2026 из-за этого «не работала» кнопка после обновления интерфейса).
+    const noCache = ext === '.html' || ext === '.js' || ext === '.css' || ext === '.webmanifest' || file.endsWith('sw.js');
     res.writeHead(200, {
       'Content-Type': MIME[ext] || 'application/octet-stream',
       'Content-Length': st.size,
